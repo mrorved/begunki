@@ -47,7 +47,7 @@ services:
     container_name: gardarika_nginx
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "85:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./frontend:/usr/share/nginx/html:ro
