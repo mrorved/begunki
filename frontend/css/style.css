@@ -100,3 +100,17 @@ body { font-size: 0.92rem; }
   .product-card .card-img-placeholder { height: 110px; }
   .product-card .product-name { font-size: .72rem; }
 }
+
+/* ── Mobile: prevent zoom on input focus ── */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="email"],
+  input[type="search"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
