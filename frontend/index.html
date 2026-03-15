@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Гардарика — Система заказов</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0d6efd" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="bg-light">
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOGIN PAGE
+═══════════════════════════════════════════════════════════ -->
+<div id="page-login" class="d-flex align-items-center justify-content-center min-vh-100 bg-primary bg-gradient">
+  <div class="card shadow-lg" style="width:360px;max-width:95vw;">
+    <div class="card-body p-4">
+      <div class="text-center mb-4">
+        <i class="bi bi-shield-lock-fill text-primary" style="font-size:2.5rem"></i>
+        <h4 class="mt-2 mb-0 fw-bold">Гардарика</h4>
+        <p class="text-muted small">Система заказов</p>
+      </div>
+      <div id="login-alert" class="alert alert-danger d-none small py-2"></div>
+      <div class="mb-3">
+        <label class="form-label">Логин</label>
+        <input id="inp-username" type="text" class="form-control" placeholder="Введите логин" autocomplete="username" />
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Пароль</label>
+        <input id="inp-password" type="password" class="form-control" placeholder="Введите пароль" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary w-100 fw-semibold" onclick="doLogin()">
+        <i class="bi bi-box-arrow-in-right me-1"></i> Войти
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════════════════════ -->
+<div id="page-app" class="d-none">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
+    <div class="container-fluid">
+      <span class="navbar-brand fw-bold">
+        <i class="bi bi-shield-lock me-1"></i>Гардарика
+      </span>
+      <div class="d-flex align-items-center gap-2 ms-auto">
+        <span id="nav-username" class="text-white-50 small d-none d-sm-block"></span>
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav ms-auto mt-2 mt-lg-0 gap-1">
+          <li class="nav-item">
+            <a class="nav-link nav-tab rounded" href="#" onclick="showTab('price')" id="tab-price">
+              <i class="bi bi-list-ul me-1"></i>Прайс
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-tab rounded" href="#" onclick="showTab('clients')" id="tab-clients">
+              <i class="bi bi-people me-1"></i>Клиенты
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-tab rounded" href="#" onclick="showTab('orders')" id="tab-orders">
+              <i class="bi bi-bag me-1"></i>Заказы
+            </a>
+          </li>
+          <li class="nav-item" id="nav-admin-li" style="display:none!important">
+            <a class="nav-link nav-tab rounded" href="#" onclick="showTab('admin')" id="tab-admin">
+              <i class="bi bi-gear me-1"></i>Админ
+            </a>
+          </li>
+          <li class="nav-item ms-lg-2">
+            <a class="nav-link text-white-50 rounded" href="#" onclick="doLogout()">
+              <i class="bi bi-box-arrow-right"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Content -->
+  <div class="container-fluid py-3 px-3 px-md-4">
+
+    <!-- ── PRICE TAB ── -->
+    <div id="tab-content-price" class="tab-content-pane">
+
+      <!-- Filters row -->
+      <div class="row g-2 mb-3">
+        <div class="col-12 col-md-5">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input id="price-search" type="search" class="form-control"
+              placeholder="Поиск по названию, коду, производителю..." oninput="onPriceSearch()" />
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <select id="filter-type" class="form-select" onchange="onPriceSearch()">
+            <option value="">Все категории</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3">
+          <select id="filter-mfr" class="form-select" onchange="onPriceSearch()">
+            <option value="">Все производители</option>
+          </select>
+        </div>
+        <div class="col-auto d-flex align-items-center gap-2">
+          <div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox" id="filter-instock" onchange="onPriceSearch()" />
+            <label class="form-check-label small" for="filter-instock">В наличии</label>
+          </div>
+          <small class="text-muted" id="price-count"></small>
+        </div>
+      </div>
+
+      <!-- Layout: product grid + cart sidebar -->
+      <div class="row g-3">
+        <!-- Product grid -->
+        <div id="price-col-products" class="col-12 col-lg-8">
+          <div id="price-loading" class="text-center py-5 d-none">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2 text-muted">Загрузка товаров...</p>
+          </div>
+          <div id="price-empty" class="text-center py-5 d-none">
+            <i class="bi bi-inbox text-muted" style="font-size:3rem"></i>
+            <p class="mt-2 text-muted">Товары не найдены</p>
+          </div>
+          <div id="price-grid" class="row row-cols-2 row-cols-sm-3 row-cols-md-3 row-cols-xl-4 g-3"></div>
+          <div class="text-center mt-3">
+            <button id="btn-load-more" class="btn btn-outline-secondary d-none" onclick="loadMoreProducts()">
+              <i class="bi bi-arrow-down-circle me-1"></i>Загрузить ещё
+            </button>
+          </div>
+        </div>
+
+        <!-- Cart sidebar -->
+        <div class="col-12 col-lg-4">
+          <div class="card border-0 shadow-sm sticky-top" style="top:70px">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+              <span class="fw-semibold"><i class="bi bi-cart3 me-1 text-primary"></i>Корзина
+                <span id="cart-badge" class="badge bg-primary ms-1 d-none">0</span>
+              </span>
+              <button class="btn btn-link btn-sm text-danger p-0" onclick="clearCart()" id="cart-clear-btn" style="display:none!important">
+                <i class="bi bi-trash"></i> Очистить
+              </button>
+            </div>
+            <div class="card-body p-2" style="max-height:380px;overflow-y:auto;">
+              <div id="cart-empty-msg" class="text-center text-muted py-4 small">
+                <i class="bi bi-cart text-muted" style="font-size:2rem"></i>
+                <p class="mt-2">Добавьте товары из прайса</p>
+              </div>
+              <div id="cart-items"></div>
+            </div>
+            <div class="card-footer bg-white" id="cart-footer" style="display:none!important">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small">Позиций: <strong id="cart-count">0</strong></span>
+                <span class="fw-bold text-primary" id="cart-total">0 ₽</span>
+              </div>
+              <button class="btn btn-success w-100" onclick="cartCheckout()">
+                <i class="bi bi-bag-check me-1"></i>Оформить заказ
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── CLIENTS TAB ── -->
+    <div id="tab-content-clients" class="tab-content-pane d-none">
+      <div class="d-flex gap-2 mb-3 align-items-center flex-wrap">
+        <button class="btn btn-primary btn-sm" onclick="openClientModal()">
+          <i class="bi bi-plus-lg me-1"></i>Новый клиент
+        </button>
+        <div class="input-group input-group-sm" style="max-width:300px;">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="search" class="form-control" placeholder="Поиск клиентов..." oninput="filterClients(this.value)" />
+        </div>
+      </div>
+      <div id="clients-loading" class="text-center py-5 d-none"><div class="spinner-border text-primary"></div></div>
+      <div id="clients-empty" class="text-center py-5 d-none">
+        <i class="bi bi-people text-muted" style="font-size:3rem"></i>
+        <p class="mt-2 text-muted">Клиентов пока нет</p>
+      </div>
+      <div id="clients-list" class="row g-3"></div>
+    </div>
+
+    <!-- ── ORDERS TAB ── -->
+    <div id="tab-content-orders" class="tab-content-pane d-none">
+      <div class="d-flex gap-2 mb-3 align-items-center flex-wrap">
+        <button class="btn btn-primary btn-sm" onclick="openOrderModal()">
+          <i class="bi bi-plus-lg me-1"></i>Новый заказ
+        </button>
+        <select id="orders-filter-status" class="form-select form-select-sm" style="max-width:160px;" onchange="loadOrders()">
+          <option value="">Все статусы</option>
+          <option value="draft">Черновик</option>
+          <option value="submitted">Отправлен</option>
+          <option value="exported">Экспортирован</option>
+        </select>
+      </div>
+      <div id="orders-loading" class="text-center py-5 d-none"><div class="spinner-border text-primary"></div></div>
+      <div id="orders-empty" class="text-center py-5 d-none">
+        <i class="bi bi-bag text-muted" style="font-size:3rem"></i>
+        <p class="mt-2 text-muted">Заказов пока нет</p>
+      </div>
+      <div id="orders-list"></div>
+    </div>
+
+    <!-- ── ADMIN TAB ── -->
+    <div id="tab-content-admin" class="tab-content-pane d-none">
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><a class="nav-link active" href="#" onclick="adminSubTab('stats', this)"><i class="bi bi-bar-chart me-1"></i>Статистика</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="adminSubTab('users', this)"><i class="bi bi-person-gear me-1"></i>Пользователи</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="adminSubTab('import', this)"><i class="bi bi-upload me-1"></i>Загрузить прайс</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="adminSubTab('photos', this)"><i class="bi bi-images me-1"></i>Фото товаров</a></li>
+      </ul>
+
+      <!-- Stats -->
+      <div id="admin-sub-stats">
+        <div id="stats-loading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+        <div id="stats-content" class="d-none"></div>
+      </div>
+
+      <!-- Users -->
+      <div id="admin-sub-users" class="d-none">
+        <div class="mb-3">
+          <button class="btn btn-primary btn-sm" onclick="openUserModal()">
+            <i class="bi bi-plus-lg me-1"></i>Добавить пользователя
+          </button>
+        </div>
+        <div id="users-list"></div>
+      </div>
+
+      <!-- Import -->
+      <div id="admin-sub-import" class="d-none">
+        <div class="card" style="max-width:500px;">
+          <div class="card-body">
+            <h6 class="card-title"><i class="bi bi-file-earmark-excel me-1 text-success"></i>Загрузить прайс из 1С</h6>
+            <p class="text-muted small">Формат: № | Наименование | Код | Код ГРД | Прайс | Упаковка | Наличие | Тип | Производитель</p>
+            <input type="file" id="price-file" class="form-control mb-3" accept=".xlsx,.xls" />
+            <button class="btn btn-success" onclick="doImportPrice()">
+              <i class="bi bi-upload me-1"></i>Импортировать
+            </button>
+            <div id="import-result" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Photos -->
+      <div id="admin-sub-photos" class="d-none">
+        <div class="card" style="max-width:500px;">
+          <div class="card-body">
+            <h6 class="card-title"><i class="bi bi-images me-1 text-info"></i>Загрузить фотографии</h6>
+            <p class="text-muted small">Имя файла = код товара. Пример: <code>00015574.jpg</code></p>
+            <input type="file" id="photo-files" class="form-control mb-3" accept="image/*" multiple />
+            <button class="btn btn-info text-white" onclick="doUploadPhotos()">
+              <i class="bi bi-cloud-upload me-1"></i>Загрузить
+            </button>
+            <div id="photos-result" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+</div><!-- /page-app -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════════════════════ -->
+
+<!-- Product Detail Modal -->
+<div class="modal fade" id="modalProduct" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mp-name">Товар</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-3">
+          <img id="mp-photo" src="" alt="" class="img-fluid rounded d-none" style="max-height:220px;object-fit:contain;" />
+          <div id="mp-photo-placeholder" class="bg-light rounded d-flex align-items-center justify-content-center" style="height:160px;">
+            <i class="bi bi-image text-muted" style="font-size:3rem"></i>
+          </div>
+        </div>
+        <table class="table table-sm table-borderless mb-0">
+          <tr><td class="text-muted" style="width:40%">Код</td><td id="mp-code" class="fw-semibold"></td></tr>
+          <tr><td class="text-muted">Код ГРД</td><td id="mp-grd"></td></tr>
+          <tr><td class="text-muted">Цена</td><td id="mp-price" class="fw-bold text-primary fs-5"></td></tr>
+          <tr><td class="text-muted">Упаковка</td><td id="mp-package"></td></tr>
+          <tr><td class="text-muted">Наличие</td><td id="mp-stock"></td></tr>
+          <tr><td class="text-muted">Категория</td><td id="mp-type"></td></tr>
+          <tr><td class="text-muted">Производитель</td><td id="mp-manufacturer"></td></tr>
+        </table>
+      </div>
+      <div class="modal-footer" id="mp-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Client Modal -->
+<div class="modal fade" id="modalClient" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mc-title">Клиент</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+
+        <!-- INN lookup -->
+        <div class="mb-3">
+          <label class="form-label">ИНН
+            <span class="text-muted small">(введите для автозаполнения)</span>
+          </label>
+          <div class="input-group">
+            <input id="mc-inn" type="text" class="form-control" placeholder="например 7707083893"
+              maxlength="12" oninput="this.value=this.value.replace(/\D/,'')" />
+            <button class="btn btn-outline-secondary" type="button" onclick="lookupInn()" id="mc-inn-btn">
+              <i class="bi bi-search"></i> Найти
+            </button>
+          </div>
+          <div id="mc-inn-status" class="form-text"></div>
+        </div>
+
+        <!-- Name - required -->
+        <div class="mb-3">
+          <label class="form-label">Название <span class="text-danger">*</span></label>
+          <input id="mc-name" type="text" class="form-control" />
+        </div>
+
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label">Телефон</label>
+            <input id="mc-phone" type="tel" class="form-control" /></div>
+          <div class="col-6"><label class="form-label">Email</label>
+            <input id="mc-email" type="email" class="form-control" /></div>
+        </div>
+        <div class="mt-2"><label class="form-label">Контактное лицо</label>
+          <input id="mc-contact" type="text" class="form-control" /></div>
+        <div class="row g-2 mt-1">
+          <div class="col-5"><label class="form-label">Город</label>
+            <input id="mc-city" type="text" class="form-control" /></div>
+          <div class="col-7"><label class="form-label">Адрес</label>
+            <input id="mc-address" type="text" class="form-control" /></div>
+        </div>
+        <div class="mt-2"><label class="form-label">Комментарий</label>
+          <textarea id="mc-comment" class="form-control" rows="2"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn btn-primary" onclick="saveClient()">Сохранить</button>
+      </div>
+      <input type="hidden" id="mc-id" />
+    </div>
+  </div>
+</div>
+
+<!-- Order Modal -->
+<div class="modal fade" id="modalOrder" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mo-title">Новый заказ</h5>
+        <button class="btn-close" data-bs-dismiss="modal" onclick="resetOrderModal()"></button>
+      </div>
+      <div class="modal-body p-0">
+        <!-- Step indicator -->
+        <div class="px-3 pt-3 pb-2 border-bottom bg-light">
+          <div class="d-flex gap-3 small">
+            <span id="mo-step-ind-1" class="fw-semibold text-primary">1. Клиент</span>
+            <span class="text-muted">›</span>
+            <span id="mo-step-ind-2" class="text-muted">2. Товары</span>
+          </div>
+        </div>
+
+        <!-- Step 1: Select client -->
+        <div id="mo-step1" class="p-3">
+          <div class="input-group mb-2">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="search" class="form-control" placeholder="Поиск клиента..." oninput="filterOrderClients(this.value)" />
+          </div>
+          <div id="mo-clients-list" style="max-height:340px;overflow-y:auto;"></div>
+          <div class="mt-2 text-center">
+            <button class="btn btn-link btn-sm" onclick="openClientModal(true)">
+              <i class="bi bi-plus-circle me-1"></i>Создать нового клиента
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Add items -->
+        <div id="mo-step2" class="d-none">
+          <!-- Selected client & discount -->
+          <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <small class="text-muted d-block">Клиент</small>
+              <strong id="mo-client-label">—</strong>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <label class="form-label mb-0 small">Скидка/наценка:</label>
+              <select id="mo-discount" class="form-select form-select-sm" style="width:auto;" onchange="onDiscountSelect()">
+                <option value="20">+20% (наценка)</option>
+                <option value="10">+10% (наценка)</option>
+                <option value="0" selected>0%</option>
+                <option value="-5">-5% (скидка)</option>
+                <option value="-10">-10% (скидка)</option>
+                <option value="custom">Вручную...</option>
+              </select>
+              <div id="mo-discount-custom" class="d-none input-group input-group-sm" style="width:110px;">
+                <input id="mo-discount-val" type="number" class="form-control" placeholder="%" step="1" min="-99" max="99" oninput="recalcOrder()" />
+                <span class="input-group-text">%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick add by code -->
+          <div class="px-3 py-2 border-bottom bg-light">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+              <input id="mo-quick-code" type="text" class="form-control" placeholder="Быстрое добавление: введите код товара" />
+              <button class="btn btn-outline-primary" onclick="quickAdd()">Добавить</button>
+            </div>
+          </div>
+
+          <!-- Search products -->
+          <div class="px-3 py-2 border-bottom">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input id="mo-search" type="search" class="form-control" placeholder="Поиск товара для добавления..." oninput="searchInOrder(this.value)" />
+            </div>
+            <div id="mo-search-results" class="mt-2 d-none" style="max-height:200px;overflow-y:auto;"></div>
+          </div>
+
+          <!-- Items list -->
+          <div class="px-3 py-2" style="max-height:260px;overflow-y:auto;">
+            <p class="text-muted small mb-2">Позиции заказа: <strong id="mo-items-count">0</strong></p>
+            <div id="mo-items-list"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div id="mo-total-block" class="d-none">
+          <span class="text-muted me-1">Итого:</span>
+          <strong id="mo-total" class="text-primary fs-5">0 ₽</strong>
+        </div>
+        <div class="d-flex gap-2 ms-auto">
+          <button id="mo-btn-back" class="btn btn-secondary d-none" onclick="orderStep(1)">
+            <i class="bi bi-arrow-left me-1"></i>Назад
+          </button>
+          <button id="mo-btn-save" class="btn btn-success d-none" onclick="saveOrder()">
+            <i class="bi bi-check-lg me-1"></i>Сохранить заказ
+          </button>
+        </div>
+      </div>
+      <input type="hidden" id="mo-id" />
+    </div>
+  </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal fade" id="modalOrderDetail" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mod-title">Заказ</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="mod-body"></div>
+      <div class="modal-footer" id="mod-footer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal fade" id="modalUser" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mu-title">Пользователь</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Логин <span class="text-danger">*</span></label>
+          <input id="mu-username" type="text" class="form-control" /></div>
+        <div class="mb-3"><label class="form-label">Полное имя</label>
+          <input id="mu-fullname" type="text" class="form-control" /></div>
+        <div class="mb-3"><label class="form-label">Пароль <span id="mu-pass-hint" class="text-muted small">(оставьте пустым чтобы не менять)</span></label>
+          <input id="mu-password" type="password" class="form-control" /></div>
+        <div class="mb-3"><label class="form-label">Роль</label>
+          <select id="mu-role" class="form-select">
+            <option value="agent">Агент</option>
+            <option value="admin">Администратор</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn btn-primary" onclick="saveUser()">Сохранить</button>
+      </div>
+      <input type="hidden" id="mu-id" />
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+  <div id="app-toast" class="toast align-items-center text-white border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body" id="toast-msg"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/price.js"></script>
+<script src="/js/clients.js"></script>
+<script src="/js/orders.js"></script>
+<script src="/js/admin.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>

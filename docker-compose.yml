@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: gardarika_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gardarika}
+      POSTGRES_USER: ${POSTGRES_USER:-gardarika}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gardarika_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gardarika}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gardarika_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gardarika}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-gardarika}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      DADATA_API_KEY: ${DADATA_API_KEY:-}
+      PHOTOS_DIR: /app/photos
+      ORDERS_DIR: /app/orders
+    volumes:
+      - gardarika_photos:/app/photos
+      - gardarika_orders:/app/orders
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - gardarika_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: gardarika_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+      - gardarika_photos:/usr/share/nginx/photos:ro
+    depends_on:
+      - backend
+    networks:
+      - gardarika_net
+
+volumes:
+  postgres_data:
+  gardarika_photos:
+  gardarika_orders:
+
+networks:
+  gardarika_net:
+    driver: bridge
