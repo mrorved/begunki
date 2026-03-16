@@ -502,11 +502,30 @@
                   <input id="moc-phone" type="tel" class="form-control form-control-sm" placeholder="Телефон" />
                 </div>
                 <div class="col-6">
-                  <input id="moc-city" type="text" class="form-control form-control-sm" placeholder="Город" />
+                  <input id="moc-email" type="email" class="form-control form-control-sm" placeholder="Email" />
                 </div>
               </div>
               <div class="mb-2">
                 <input id="moc-contact" type="text" class="form-control form-control-sm" placeholder="Контактное лицо" />
+              </div>
+              <div class="row g-1 mb-2">
+                <div class="col-6">
+                  <input id="moc-city" type="text" class="form-control form-control-sm" placeholder="Город" />
+                </div>
+                <div class="col-6">
+                  <input id="moc-address" type="text" class="form-control form-control-sm" placeholder="Адрес" />
+                </div>
+              </div>
+              <div class="mb-2">
+                <select id="moc-status" class="form-select form-select-sm">
+                  <option value="new">🆕 Новый</option>
+                  <option value="potential">💡 Потенциальный</option>
+                  <option value="revived">🔄 Оживший</option>
+                  <option value="active">✅ Действующий</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <textarea id="moc-comment" class="form-control form-control-sm" rows="2" placeholder="Комментарий"></textarea>
               </div>
               <button class="btn btn-primary btn-sm w-100" onclick="saveInlineClient()">
                 <i class="bi bi-check-lg me-1"></i>Создать и выбрать
