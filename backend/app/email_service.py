@@ -74,6 +74,7 @@ async def send_order_email(
         row("Скидка/наценка", discount_str),
     ])
 
+    grd_note = "<p style='margin-top:12px;font-size:12px;color:#6c757d'>Файл заказа для 1С прикреплён к письму.</p>" if grd_filepath else ""
     html_body = f"""<!DOCTYPE html>
 <html>
 <body style="font-family:Arial,sans-serif;max-width:720px;margin:0 auto;color:#212529">
@@ -105,7 +106,7 @@ async def send_order_email(
         </tr>
       </tfoot>
     </table>
-    {"<p style='margin-top:12px;font-size:12px;color:#6c757d'><i class=\"bi bi-paperclip\"></i> Файл заказа для 1С прикреплён к письму.</p>" if grd_filepath else ""}
+    {grd_note}
   </div>
   <div style="padding:12px 24px;background:#f8f9fa;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px;font-size:12px;color:#6c757d">
     Письмо отправлено автоматически системой заказов Гардарика
