@@ -27,7 +27,7 @@ function toggleInlineClientForm(e) {
     icon.className = 'bi bi-dash-circle';
     label.textContent = 'Скрыть форму';
     // Clear fields
-    ['moc-inn','moc-name','moc-phone','moc-city','moc-contact'].forEach(id => {
+    ['moc-inn','moc-name','moc-phone','moc-email','moc-contact','moc-city','moc-address','moc-comment'].forEach(id => {
       const f = el(id); if (f) f.value = '';
     });
     el('moc-inn-status').textContent = '';
@@ -65,10 +65,14 @@ async function saveInlineClient() {
 
   const data = {
     name,
-    inn:    el('moc-inn').value.trim()     || null,
-    phone:  el('moc-phone').value.trim()   || null,
-    city:   el('moc-city').value.trim()    || null,
+    inn:            el('moc-inn').value.trim()     || null,
+    phone:          el('moc-phone').value.trim()   || null,
+    email:          el('moc-email') ? el('moc-email').value.trim() || null : null,
     contact_person: el('moc-contact').value.trim() || null,
+    city:           el('moc-city').value.trim()    || null,
+    address:        el('moc-address') ? el('moc-address').value.trim() || null : null,
+    status:         el('moc-status') ? el('moc-status').value || 'new' : 'new',
+    comment:        el('moc-comment') ? el('moc-comment').value.trim() || null : null,
   };
 
   try {
