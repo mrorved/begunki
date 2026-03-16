@@ -398,11 +398,45 @@
             <span class="input-group-text"><i class="bi bi-search"></i></span>
             <input type="search" class="form-control" placeholder="Поиск клиента..." oninput="filterOrderClients(this.value)" />
           </div>
-          <div id="mo-clients-list" style="max-height:340px;overflow-y:auto;"></div>
-          <div class="mt-2 text-center">
-            <button class="btn btn-link btn-sm" onclick="openClientModal(true)">
-              <i class="bi bi-plus-circle me-1"></i>Создать нового клиента
-            </button>
+          <div id="mo-clients-list" style="max-height:220px;overflow-y:auto;"></div>
+
+          <!-- Inline new client form -->
+          <div class="mt-3 border-top pt-3">
+            <a href="#" class="small text-primary text-decoration-none d-flex align-items-center gap-1"
+              onclick="toggleInlineClientForm(event)">
+              <i class="bi bi-plus-circle" id="mo-new-client-icon"></i>
+              <span id="mo-new-client-label">Создать нового клиента</span>
+            </a>
+            <div id="mo-inline-client-form" class="d-none mt-2">
+              <!-- INN lookup -->
+              <div class="mb-2">
+                <div class="input-group input-group-sm">
+                  <input id="moc-inn" type="text" class="form-control" placeholder="ИНН для автозаполнения"
+                    maxlength="12" oninput="this.value=this.value.replace(/\D/g,'')" />
+                  <button class="btn btn-outline-secondary" onclick="lookupInnInline()" id="moc-inn-btn">
+                    <i class="bi bi-search"></i>
+                  </button>
+                </div>
+                <div id="moc-inn-status" class="form-text"></div>
+              </div>
+              <div class="mb-2">
+                <input id="moc-name" type="text" class="form-control form-control-sm" placeholder="Название *" />
+              </div>
+              <div class="row g-1 mb-2">
+                <div class="col-6">
+                  <input id="moc-phone" type="tel" class="form-control form-control-sm" placeholder="Телефон" />
+                </div>
+                <div class="col-6">
+                  <input id="moc-city" type="text" class="form-control form-control-sm" placeholder="Город" />
+                </div>
+              </div>
+              <div class="mb-2">
+                <input id="moc-contact" type="text" class="form-control form-control-sm" placeholder="Контактное лицо" />
+              </div>
+              <button class="btn btn-primary btn-sm w-100" onclick="saveInlineClient()">
+                <i class="bi bi-check-lg me-1"></i>Создать и выбрать
+              </button>
+            </div>
           </div>
         </div>
 
