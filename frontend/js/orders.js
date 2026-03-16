@@ -371,6 +371,8 @@ async function saveOrder() {
     }
     bsModalOrder.hide();
     resetOrderModal();
+    // Clear cart after successful order
+    if (typeof clearCart === 'function') clearCart();
     if (currentTab === 'orders') loadOrders();
   } catch(err) {
     toastErr('Ошибка сохранения: ' + err.message);
