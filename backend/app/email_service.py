@@ -48,6 +48,7 @@ async def send_order_email(
         rows_html += f"""
         <tr>
           <td style="padding:8px;border:1px solid #dee2e6;text-align:center">{i}</td>
+          <td style="padding:8px;border:1px solid #dee2e6;text-align:center;font-family:monospace;font-size:12px">{item['product_code']}</td>
           <td style="padding:8px;border:1px solid #dee2e6">{item['product_name'] or item['product_code']}</td>
           <td style="padding:8px;border:1px solid #dee2e6;text-align:center">{item['qty']}</td>
           <td style="padding:8px;border:1px solid #dee2e6;text-align:right">{base_price:,.2f} ₽</td>
@@ -91,6 +92,7 @@ async def send_order_email(
       <thead>
         <tr style="background:#e9ecef">
           <th style="padding:8px;border:1px solid #dee2e6;text-align:center">№</th>
+          <th style="padding:8px;border:1px solid #dee2e6;text-align:center">Код</th>
           <th style="padding:8px;border:1px solid #dee2e6;text-align:left">Наименование</th>
           <th style="padding:8px;border:1px solid #dee2e6;text-align:center">Кол-во</th>
           <th style="padding:8px;border:1px solid #dee2e6;text-align:right">Цена (баз.)</th>
@@ -101,7 +103,7 @@ async def send_order_email(
       <tbody>{rows_html}</tbody>
       <tfoot>
         <tr style="background:#e9ecef">
-          <td colspan="5" style="padding:8px;border:1px solid #dee2e6;text-align:right"><b>Итого:</b></td>
+          <td colspan="6" style="padding:8px;border:1px solid #dee2e6;text-align:right"><b>Итого:</b></td>
           <td style="padding:8px;border:1px solid #dee2e6;text-align:right"><b>{total:,.2f} ₽</b></td>
         </tr>
       </tfoot>
