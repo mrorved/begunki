@@ -7,6 +7,16 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+class Department(Base):
+    __tablename__ = "departments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False, unique=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    users = relationship("User", back_populates="department")
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -14,10 +24,12 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False, index=True)
     full_name = Column(String(200))
     hashed_password = Column(String(255), nullable=False)
-    role = Column(String(20), nullable=False, default="agent")  # agent | admin
+    role = Column(String(20), nullable=False, default="agent")  # admin | director | head | agent
     is_active = Column(Boolean, default=True)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    department = relationship("Department", back_populates="users")
     clients = relationship("Client", back_populates="agent")
     orders = relationship("Order", back_populates="agent")
 
@@ -66,7 +78,7 @@ class Order(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     discount = Column(Float, default=0)
     total = Column(Float, default=0)
-    status = Column(String(20), default="draft")  # draft | submitted | exported
+    status = Column(String(20), default="draft")  # draft | submitted | processing | exported
 
     agent = relationship("User", back_populates="orders")
     client = relationship("Client", back_populates="orders")

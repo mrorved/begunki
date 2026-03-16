@@ -1,18 +1,19 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 from typing import List, Optional
 from app.database import get_db
+from sqlalchemy.orm import selectinload
 from app.models import Order, OrderItem, Client, Product, User
-from app.auth import get_current_user
+from app.auth import get_current_user, can_view_all, can_manage_orders
 
 router = APIRouter()
 
 VALID_DISCOUNTS = {-10, -5, 0, 10, 20}
+PROCESSING_STATUS = 'processing'
 
 
 def get_orders_dir() -> str:
@@ -34,14 +35,51 @@ class OrderIn(BaseModel):
 
 
 @router.get("")
-async def list_orders(db: AsyncSession = Depends(get_db), me: User = Depends(get_current_user)):
+async def list_orders(
+    db: AsyncSession = Depends(get_db),
+    me: User = Depends(get_current_user),
+    status: str = Query(None),
+    agent_id: int = Query(None),
+    department_id: int = Query(None),
+    client_id: int = Query(None),
+):
     q = (
         select(Order)
         .options(selectinload(Order.client), selectinload(Order.agent), selectinload(Order.items))
         .order_by(Order.created_at.desc())
     )
-    if me.role != "admin":
+
+    # Role-based visibility
+    if me.role == "agent":
+        # Agent sees only own orders, excluding processing by default
         q = q.where(Order.agent_id == me.id)
+    elif me.role == "head":
+        # Head sees own department's orders
+        dept_users = (await db.execute(
+            select(User).where(User.department_id == me.department_id)
+        )).scalars().all()
+        dept_user_ids = [u.id for u in dept_users]
+        q = q.where(Order.agent_id.in_(dept_user_ids))
+    elif me.role in ("admin", "director"):
+        # Admin/director see everything
+        if department_id:
+            dept_users = (await db.execute(
+                select(User).where(User.department_id == department_id)
+            )).scalars().all()
+            dept_user_ids = [u.id for u in dept_users]
+            q = q.where(Order.agent_id.in_(dept_user_ids))
+        if agent_id:
+            q = q.where(Order.agent_id == agent_id)
+        if client_id:
+            q = q.where(Order.client_id == client_id)
+
+    # Status filter
+    if status:
+        q = q.where(Order.status == status)
+    elif me.role in ("agent", "head"):
+        # Hide processing orders from default view
+        q = q.where(Order.status != "processing")
+
     rows = (await db.execute(q)).scalars().all()
     return [_to_dict(o) for o in rows]
 
@@ -111,6 +149,16 @@ async def submit_order(oid: int, db: AsyncSession = Depends(get_db), me: User = 
     order.status = "submitted"
     await db.commit()
     return {"ok": True, "status": "submitted"}
+
+
+@router.post("/{oid}/process")
+async def process_order(oid: int, db: AsyncSession = Depends(get_db), me: User = Depends(get_current_user)):
+    if not can_manage_orders(me):
+        raise HTTPException(403, "Доступ запрещён")
+    order = await _get_own(oid, db, me)
+    order.status = "processing"
+    await db.commit()
+    return {"ok": True, "status": "processing"}
 
 
 @router.get("/{oid}/export")
@@ -190,6 +238,7 @@ def _to_dict(o: Order) -> dict:
         "id": o.id,
         "agent_id": o.agent_id,
         "agent_name": o.agent.full_name if o.agent else None,
+        "agent_department": o.agent.department.name if o.agent and o.agent.department else None,
         "client_id": o.client_id,
         "client_name": o.client.name if o.client else None,
         "client_city": o.client.city if o.client else None,

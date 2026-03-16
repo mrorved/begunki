@@ -1,5 +1,5 @@
 // ── Bootstrap instances ────────────────────────────────────────────────────────
-let bsModalProduct, bsModalClient, bsModalOrder, bsModalOrderDetail, bsModalUser;
+let bsModalProduct, bsModalClient, bsModalOrder, bsModalOrderDetail, bsModalUser, bsModalDept;
 let bsToast;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
   bsModalOrder       = new bootstrap.Modal(document.getElementById('modalOrder'));
   bsModalOrderDetail = new bootstrap.Modal(document.getElementById('modalOrderDetail'));
   bsModalUser        = new bootstrap.Modal(document.getElementById('modalUser'));
+  if (document.getElementById('modalDept'))
+    bsModalDept = new bootstrap.Modal(document.getElementById('modalDept'));
   bsToast = new bootstrap.Toast(document.getElementById('app-toast'), { delay: 3000 });
 
   // Enter key on login
@@ -76,9 +78,10 @@ function initApp() {
   // Set user info in navbar
   document.getElementById('nav-username').textContent = Auth.user.full_name || '';
 
-  // Show/hide admin tab based on role
+  // Show/hide tabs based on role
   const adminLi = document.getElementById('nav-admin-li');
-  if (Auth.isAdmin()) {
+  const role = Auth.user.role;
+  if (role === 'admin') {
     adminLi.style.removeProperty('display');
   } else {
     adminLi.style.setProperty('display', 'none', 'important');
@@ -119,7 +122,7 @@ function showTab(name) {
   currentTab = name;
   if (name === 'price')   { initPriceTab(); }
   if (name === 'clients') { loadClients(); }
-  if (name === 'orders')  { loadOrders(); }
+  if (name === 'orders')  { initOrdersTab(); }
   if (name === 'admin')   { initAdminTab(); }
 }
 
@@ -135,9 +138,10 @@ function fmtDate(iso) {
 
 function statusBadge(status) {
   const map = {
-    draft:     ['secondary', 'Черновик'],
-    submitted: ['primary',   'Отправлен'],
-    exported:  ['success',   'Экспортирован'],
+    draft:      ['secondary', 'Черновик'],
+    submitted:  ['primary',   'Отправлен'],
+    processing: ['warning',   'В обработке'],
+    exported:   ['success',   'Экспортирован'],
   };
   const [cls, label] = map[status] || ['secondary', status];
   return `<span class="badge bg-${cls}">${label}</span>`;

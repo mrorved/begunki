@@ -32,6 +32,11 @@ const Auth = {
   },
 
   isAdmin() { return this.user && this.user.role === 'admin'; },
+  isDirector() { return this.user && this.user.role === 'director'; },
+  isHead() { return this.user && this.user.role === 'head'; },
+  isAgent() { return this.user && this.user.role === 'agent'; },
+  canManageOrders() { return this.user && ['admin','agent','head'].includes(this.user.role); },
+  canViewAll() { return this.user && ['admin','director'].includes(this.user.role); },
 };
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
@@ -129,4 +134,17 @@ const API = {
   updateUser: (id, data) => apiPut(`/admin/users/${id}`, data),
   deleteUser: (id) => apiDelete(`/admin/users/${id}`),
   getStats: () => apiGet('/admin/stats'),
+
+  // Departments
+  getDepartments: () => apiGet('/departments'),
+  createDepartment: (data) => apiPost('/departments', data),
+  updateDepartment: (id, data) => apiPut(`/departments/${id}`, data),
+  deleteDepartment: (id) => apiDelete(`/departments/${id}`),
+
+  // Orders extra
+  processOrder: (id) => apiPost(`/orders/${id}/process`, {}),
+  getOrdersFiltered: (params = {}) => {
+    const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([,v]) => v !== '' && v != null)));
+    return apiGet(`/orders?${qs}`);
+  },
 };

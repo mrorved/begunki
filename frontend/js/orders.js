@@ -377,16 +377,85 @@ async function saveOrder() {
 // ── Orders List ────────────────────────────────────────────────────────────────
 let allOrders = [];
 
+async function initOrdersTab() {
+  // Show advanced filters for admin/director
+  if (Auth.canViewAll()) {
+    const adv = el('orders-advanced-filters');
+    if (adv) adv.classList.remove('d-none');
+    // Hide "New order" button for director
+    if (Auth.isDirector()) {
+      const btn = el('btn-new-order');
+      if (btn) btn.classList.add('d-none');
+    }
+    // Load departments for filter
+    try {
+      const depts = await API.getDepartments();
+      const deptSel = el('orders-filter-dept');
+      if (deptSel) {
+        depts.forEach(d => {
+          const o = document.createElement('option');
+          o.value = d.id; o.textContent = d.name;
+          deptSel.appendChild(o);
+        });
+      }
+    } catch(_) {}
+    // Load clients for filter
+    try {
+      const clients = await API.getClients();
+      const cSel = el('orders-filter-client');
+      if (cSel) {
+        clients.forEach(c => {
+          const o = document.createElement('option');
+          o.value = c.id; o.textContent = c.name;
+          cSel.appendChild(o);
+        });
+      }
+    } catch(_) {}
+  }
+  await loadOrders();
+}
+
+async function onDeptFilterChange() {
+  // When dept changes — reload agents for that dept
+  const deptId = el('orders-filter-dept') ? el('orders-filter-dept').value : '';
+  const agentSel = el('orders-filter-agent');
+  if (agentSel) {
+    agentSel.innerHTML = '<option value="">Все агенты</option>';
+    if (deptId) {
+      try {
+        const users = await apiGet('/admin/users');
+        users.filter(u => String(u.department_id) === String(deptId) && u.role !== 'director')
+          .forEach(u => {
+            const o = document.createElement('option');
+            o.value = u.id; o.textContent = u.full_name || u.username;
+            agentSel.appendChild(o);
+          });
+      } catch(_) {}
+    }
+  }
+  loadOrders();
+}
+
 async function loadOrders() {
   el('orders-loading').classList.remove('d-none');
   el('orders-list').innerHTML = '';
   el('orders-empty').classList.add('d-none');
 
   try {
-    allOrders = await API.getOrders();
-    const filterStatus = el('orders-filter-status').value;
-    const filtered = filterStatus ? allOrders.filter(o => o.status === filterStatus) : allOrders;
-    renderOrders(filtered);
+    const params = {
+      status: el('orders-filter-status') ? el('orders-filter-status').value : '',
+    };
+    // Add dept/agent/client filters for admin/director
+    if (Auth.canViewAll()) {
+      const deptEl = el('orders-filter-dept');
+      const agentEl = el('orders-filter-agent');
+      const clientEl = el('orders-filter-client');
+      if (deptEl) params.department_id = deptEl.value;
+      if (agentEl) params.agent_id = agentEl.value;
+      if (clientEl) params.client_id = clientEl.value;
+    }
+    allOrders = await API.getOrdersFiltered(params);
+    renderOrders(allOrders);
   } catch(err) {
     toastErr('Ошибка загрузки заказов: ' + err.message);
   } finally {
@@ -437,11 +506,13 @@ function renderOrders(orders) {
           <ul class="dropdown-menu dropdown-menu-end">
             <li><a class="dropdown-item" href="#" onclick="showOrderDetail(${o.id})">
               <i class="bi bi-eye me-2"></i>Просмотр</a></li>
-            ${o.status !== 'exported' ? `
+            ${o.status !== 'exported' && o.status !== 'processing' ? `
             <li><a class="dropdown-item" href="#" onclick="openOrderModal(${o.id})">
               <i class="bi bi-pencil me-2"></i>Редактировать</a></li>
             <li><a class="dropdown-item" href="#" onclick="submitOrder(${o.id})">
-              <i class="bi bi-send me-2"></i>Отправить</a></li>` : ''}
+              <i class="bi bi-send me-2"></i>Отправить</a></li>
+            <li><a class="dropdown-item text-primary fw-semibold" href="#" onclick="processOrder(${o.id})">
+              <i class="bi bi-arrow-right-circle me-2"></i>Отправить в обработку</a></li>` : ''}
             <li><a class="dropdown-item text-success" href="#" onclick="doExportOrder(${o.id})">
               <i class="bi bi-download me-2"></i>Экспорт .grd</a></li>
             <li><hr class="dropdown-divider"></li>
@@ -527,6 +598,17 @@ async function submitOrder(id) {
   try {
     await API.submitOrder(id);
     toastOk('Заказ отправлен');
+    loadOrders();
+  } catch(err) {
+    toastErr('Ошибка: ' + err.message);
+  }
+}
+
+async function processOrder(id) {
+  if (!confirm('Отправить заказ в обработку? После этого он исчезнет из основного списка.')) return;
+  try {
+    await API.processOrder(id);
+    toastOk('Заказ отправлен в обработку');
     loadOrders();
   } catch(err) {
     toastErr('Ошибка: ' + err.message);

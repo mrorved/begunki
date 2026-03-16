@@ -203,15 +203,28 @@
     <!-- ── ORDERS TAB ── -->
     <div id="tab-content-orders" class="tab-content-pane d-none">
       <div class="d-flex gap-2 mb-3 align-items-center flex-wrap">
-        <button class="btn btn-primary btn-sm" onclick="openOrderModal()">
+        <button class="btn btn-primary btn-sm" id="btn-new-order" onclick="openOrderModal()">
           <i class="bi bi-plus-lg me-1"></i>Новый заказ
         </button>
         <select id="orders-filter-status" class="form-select form-select-sm" style="max-width:160px;" onchange="loadOrders()">
-          <option value="">Все статусы</option>
+          <option value="">Активные заказы</option>
           <option value="draft">Черновик</option>
           <option value="submitted">Отправлен</option>
+          <option value="processing">В обработке</option>
           <option value="exported">Экспортирован</option>
         </select>
+        <!-- Filters for admin/director only -->
+        <div id="orders-advanced-filters" class="d-none d-flex gap-2 flex-wrap">
+          <select id="orders-filter-dept" class="form-select form-select-sm" style="max-width:150px;" onchange="onDeptFilterChange()">
+            <option value="">Все отделы</option>
+          </select>
+          <select id="orders-filter-agent" class="form-select form-select-sm" style="max-width:150px;" onchange="loadOrders()">
+            <option value="">Все агенты</option>
+          </select>
+          <select id="orders-filter-client" class="form-select form-select-sm" style="max-width:150px;" onchange="loadOrders()">
+            <option value="">Все клиенты</option>
+          </select>
+        </div>
       </div>
       <div id="orders-loading" class="text-center py-5 d-none"><div class="spinner-border text-primary"></div></div>
       <div id="orders-empty" class="text-center py-5 d-none">
@@ -226,6 +239,7 @@
       <ul class="nav nav-tabs mb-3">
         <li class="nav-item"><a class="nav-link active" href="#" onclick="adminSubTab('stats', this)"><i class="bi bi-bar-chart me-1"></i>Статистика</a></li>
         <li class="nav-item"><a class="nav-link" href="#" onclick="adminSubTab('users', this)"><i class="bi bi-person-gear me-1"></i>Пользователи</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="adminSubTab('departments', this)"><i class="bi bi-diagram-3 me-1"></i>Отделы</a></li>
         <li class="nav-item"><a class="nav-link" href="#" onclick="adminSubTab('import', this)"><i class="bi bi-upload me-1"></i>Загрузить прайс</a></li>
         <li class="nav-item"><a class="nav-link" href="#" onclick="adminSubTab('photos', this)"><i class="bi bi-images me-1"></i>Фото товаров</a></li>
       </ul>
@@ -244,6 +258,16 @@
           </button>
         </div>
         <div id="users-list"></div>
+      </div>
+
+      <!-- Departments -->
+      <div id="admin-sub-departments" class="d-none">
+        <div class="mb-3">
+          <button class="btn btn-primary btn-sm" onclick="openDeptModal()">
+            <i class="bi bi-plus-lg me-1"></i>Добавить отдел
+          </button>
+        </div>
+        <div id="departments-list"></div>
       </div>
 
       <!-- Import -->
@@ -523,6 +547,27 @@
   </div>
 </div>
 
+<!-- Department Modal -->
+<div class="modal fade" id="modalDept" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="md-title">Отдел</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Название отдела <span class="text-danger">*</span></label>
+          <input id="md-name" type="text" class="form-control" placeholder="например: Отдел замков" /></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn btn-primary" onclick="saveDept()">Сохранить</button>
+      </div>
+      <input type="hidden" id="md-id" />
+    </div>
+  </div>
+</div>
+
 <!-- User Modal -->
 <div class="modal fade" id="modalUser" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
@@ -538,11 +583,22 @@
           <input id="mu-fullname" type="text" class="form-control" /></div>
         <div class="mb-3"><label class="form-label">Пароль <span id="mu-pass-hint" class="text-muted small">(оставьте пустым чтобы не менять)</span></label>
           <input id="mu-password" type="password" class="form-control" /></div>
-        <div class="mb-3"><label class="form-label">Роль</label>
-          <select id="mu-role" class="form-select">
-            <option value="agent">Агент</option>
-            <option value="admin">Администратор</option>
-          </select>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">Роль</label>
+            <select id="mu-role" class="form-select">
+              <option value="agent">Агент</option>
+              <option value="head">Начальник отдела</option>
+              <option value="director">Дирекция</option>
+              <option value="admin">Администратор</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Отдел</label>
+            <select id="mu-department" class="form-select">
+              <option value="">— Без отдела —</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="modal-footer">

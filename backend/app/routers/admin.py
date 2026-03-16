@@ -14,22 +14,28 @@ class UserCreate(BaseModel):
     username: str
     password: str
     full_name: Optional[str] = None
-    role: str = "agent"
+    role: str = "agent"  # admin | director | head | agent
+    department_id: Optional[int] = None
 
 
 class UserUpdate(BaseModel):
     password: Optional[str] = None
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
+    role: Optional[str] = None
+    department_id: Optional[int] = None
 
 
 @router.get("/users")
 async def list_users(db: AsyncSession = Depends(get_db), _=Depends(require_admin)):
-    rows = (await db.execute(select(User).order_by(User.role, User.username))).scalars().all()
+    from sqlalchemy.orm import selectinload
+    rows = (await db.execute(select(User).options(selectinload(User.department)).order_by(User.role, User.username))).scalars().all()
     return [
         {
             "id": u.id, "username": u.username, "full_name": u.full_name,
             "role": u.role, "is_active": u.is_active,
+            "department_id": u.department_id,
+            "department_name": u.department.name if u.department else None,
             "created_at": u.created_at.isoformat() if u.created_at else None,
         }
         for u in rows
@@ -46,6 +52,7 @@ async def create_user(data: UserCreate, db: AsyncSession = Depends(get_db), _=De
         full_name=data.full_name or data.username,
         hashed_password=get_password_hash(data.password),
         role=data.role,
+        department_id=data.department_id,
         is_active=True,
     )
     db.add(user)
@@ -65,6 +72,10 @@ async def update_user(uid: int, data: UserUpdate, db: AsyncSession = Depends(get
         user.full_name = data.full_name
     if data.is_active is not None:
         user.is_active = data.is_active
+    if data.role is not None:
+        user.role = data.role
+    if data.department_id is not None:
+        user.department_id = data.department_id
     await db.commit()
     return {"ok": True}
 

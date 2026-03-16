@@ -60,3 +60,17 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Доступ запрещён")
     return current_user
+
+
+async def require_admin_or_director(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in ("admin", "director"):
+        raise HTTPException(status_code=403, detail="Доступ запрещён")
+    return current_user
+
+
+def can_manage_orders(user: User) -> bool:
+    return user.role in ("admin", "agent", "head")
+
+
+def can_view_all(user: User) -> bool:
+    return user.role in ("admin", "director")

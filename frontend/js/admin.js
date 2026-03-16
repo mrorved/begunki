@@ -5,8 +5,9 @@ function initAdminTab() {
 
 function adminSubTab(name, linkEl) {
   // Hide all sub-panels
-  ['stats', 'users', 'import', 'photos'].forEach(t => {
-    el(`admin-sub-${t}`).classList.add('d-none');
+  ['stats', 'users', 'departments', 'import', 'photos'].forEach(t => {
+    const panel = el(`admin-sub-${t}`);
+    if (panel) panel.classList.add('d-none');
   });
   // Deactivate all tab links
   document.querySelectorAll('#tab-content-admin .nav-link').forEach(l => l.classList.remove('active'));
@@ -17,6 +18,7 @@ function adminSubTab(name, linkEl) {
 
   if (name === 'stats') loadStats();
   if (name === 'users') loadUsers();
+  if (name === 'departments') loadDepartments();
 }
 
 // ── Statistics ─────────────────────────────────────────────────────────────────
@@ -130,6 +132,7 @@ function renderUsers() {
               <th>Логин</th>
               <th>Имя</th>
               <th>Роль</th>
+              <th>Отдел</th>
               <th>Статус</th>
               <th>Добавлен</th>
               <th></th>
@@ -141,10 +144,12 @@ function renderUsers() {
                 <td class="fw-semibold">${esc(u.username)}</td>
                 <td>${esc(u.full_name || '—')}</td>
                 <td>
-                  ${u.role === 'admin'
-                    ? '<span class="badge bg-warning text-dark">Администратор</span>'
-                    : '<span class="badge bg-info text-dark">Агент</span>'}
+                  ${{'admin':'<span class="badge bg-warning text-dark">Администратор</span>',
+                     'director':'<span class="badge bg-purple text-white" style="background:#6f42c1">Дирекция</span>',
+                     'head':'<span class="badge bg-primary">Нач. отдела</span>',
+                     'agent':'<span class="badge bg-info text-dark">Агент</span>'}[u.role] || u.role}
                 </td>
+                <td>${esc(u.department_name || '—')}</td>
                 <td>
                   ${u.is_active
                     ? '<span class="badge bg-success">Активен</span>'
@@ -175,12 +180,27 @@ function renderUsers() {
     </div>`;
 }
 
-function openUserModal(userId = null) {
+async function openUserModal(userId = null) {
+  // Load departments for select
+  if (!allDepartments.length) {
+    try { allDepartments = await API.getDepartments(); } catch(_) {}
+  }
+
+  // Populate dept select
+  const deptSel = el('mu-department');
+  deptSel.innerHTML = '<option value="">— Без отдела —</option>';
+  allDepartments.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.id; o.textContent = d.name;
+    deptSel.appendChild(o);
+  });
+
   el('mu-id').value = userId || '';
   el('mu-username').value = '';
   el('mu-fullname').value = '';
   el('mu-password').value = '';
   el('mu-role').value = 'agent';
+  deptSel.value = '';
 
   if (userId) {
     el('mu-title').textContent = 'Редактировать пользователя';
@@ -191,6 +211,7 @@ function openUserModal(userId = null) {
       el('mu-username').value = u.username;
       el('mu-fullname').value = u.full_name || '';
       el('mu-role').value = u.role;
+      deptSel.value = u.department_id || '';
     }
   } else {
     el('mu-title').textContent = 'Новый пользователь';
@@ -213,14 +234,16 @@ async function saveUser() {
     return;
   }
 
+  const department_id = el('mu-department').value ? parseInt(el('mu-department').value) : null;
+
   try {
     if (id) {
-      const data = { full_name: fullname, role };
+      const data = { full_name: fullname, role, department_id };
       if (password) data.password = password;
       await API.updateUser(id, data);
       toastOk('Пользователь обновлён');
     } else {
-      await API.createUser({ username, password, full_name: fullname, role });
+      await API.createUser({ username, password, full_name: fullname, role, department_id });
       toastOk('Пользователь создан');
     }
     bsModalUser.hide();
@@ -305,4 +328,96 @@ async function doUploadPhotos() {
     </div>`;
   fileInput.value = '';
   toastOk(`Фото загружено: ${ok} файлов`);
+}
+
+// ── Departments Management ────────────────────────────────────────────────────
+let allDepartments = [];
+
+async function loadDepartments() {
+  const list = el('departments-list');
+  list.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+  try {
+    allDepartments = await API.getDepartments();
+    renderDepartments();
+  } catch(err) {
+    toastErr('Ошибка загрузки отделов: ' + err.message);
+  }
+}
+
+function renderDepartments() {
+  const list = el('departments-list');
+  if (!allDepartments.length) {
+    list.innerHTML = '<p class="text-muted">Отделов пока нет. Создайте первый отдел.</p>';
+    return;
+  }
+  list.innerHTML = `
+    <div class="card border-0 shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Название</th><th></th></tr>
+          </thead>
+          <tbody>
+            ${allDepartments.map(d => `
+              <tr>
+                <td class="fw-semibold">${esc(d.name)}</td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-secondary me-1" onclick="openDeptModal(${d.id})">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" onclick="deleteDept(${d.id}, '${esc(d.name)}')">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function openDeptModal(deptId = null) {
+  el('md-id').value = deptId || '';
+  el('md-name').value = '';
+  el('md-title').textContent = deptId ? 'Редактировать отдел' : 'Новый отдел';
+  if (deptId) {
+    const d = allDepartments.find(x => x.id === deptId);
+    if (d) el('md-name').value = d.name;
+  }
+  bsModalDept.show();
+}
+
+async function saveDept() {
+  const name = el('md-name').value.trim();
+  if (!name) { toastErr('Введите название отдела'); return; }
+  const id = parseInt(el('md-id').value);
+  try {
+    if (id) {
+      await API.updateDepartment(id, { name });
+      toastOk('Отдел обновлён');
+    } else {
+      await API.createDepartment({ name });
+      toastOk('Отдел создан');
+    }
+    bsModalDept.hide();
+    loadDepartments();
+  } catch(err) {
+    toastErr('Ошибка: ' + err.message);
+  }
+}
+
+async function deleteDept(id, name) {
+  if (!confirm(`Удалить отдел «${name}»?`)) return;
+  try {
+    await API.deleteDepartment(id);
+    toastOk('Отдел удалён');
+    loadDepartments();
+  } catch(err) {
+    toastErr('Ошибка: ' + err.message);
+  }
+}
+
+function esc(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }

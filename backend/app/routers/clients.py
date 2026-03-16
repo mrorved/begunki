@@ -28,7 +28,17 @@ async def list_clients(
     me: User = Depends(get_current_user),
 ):
     q = select(Client).order_by(Client.name)
-    if me.role != "admin":
+    if me.role in ("admin", "director"):
+        pass  # see all
+    elif me.role == "head":
+        # See clients of own department
+        dept_users = (await db.execute(
+            select(User).where(User.department_id == me.department_id)
+        )).scalars().all()
+        dept_user_ids = [u.id for u in dept_users]
+        q = q.where(Client.agent_id.in_(dept_user_ids))
+    else:
+        # Agent sees only own clients
         q = q.where(Client.agent_id == me.id)
     rows = (await db.execute(q)).scalars().all()
     return [_to_dict(c) for c in rows]
