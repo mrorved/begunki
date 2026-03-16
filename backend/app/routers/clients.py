@@ -11,6 +11,8 @@ from app.auth import get_current_user
 router = APIRouter()
 
 
+CLIENT_STATUSES = ["new", "potential", "revived", "active"]
+
 class ClientIn(BaseModel):
     name: str
     inn: Optional[str] = None
@@ -20,6 +22,7 @@ class ClientIn(BaseModel):
     city: Optional[str] = None
     address: Optional[str] = None
     comment: Optional[str] = None
+    status: Optional[str] = "new" 
 
 
 @router.get("")
@@ -150,6 +153,7 @@ def _to_dict(c: Client) -> dict:
         "city": c.city,
         "address": c.address,
         "comment": c.comment,
+        "status": c.status or "new",
         "agent_id": c.agent_id,
         "created_at": c.created_at.isoformat() if c.created_at else None,
     }
