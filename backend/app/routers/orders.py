@@ -199,8 +199,21 @@ async def _get_own(oid: int, db: AsyncSession, me: User, load_items: bool = Fals
     order = (await db.execute(q)).scalar_one_or_none()
     if not order:
         raise HTTPException(404, "Заказ не найден")
-    if me.role != "admin" and order.agent_id != me.id:
-        raise HTTPException(403, "Доступ запрещён")
+
+    if me.role in ("admin", "director"):
+        pass  # full access
+    elif me.role == "head":
+        # Head can access orders of agents in their department
+        dept_users = (await db.execute(
+            select(User).where(User.department_id == me.department_id)
+        )).scalars().all()
+        dept_user_ids = [u.id for u in dept_users]
+        if order.agent_id not in dept_user_ids:
+            raise HTTPException(403, "Доступ запрещён")
+    else:
+        # Agent sees only own orders
+        if order.agent_id != me.id:
+            raise HTTPException(403, "Доступ запрещён")
     return order
 
 
