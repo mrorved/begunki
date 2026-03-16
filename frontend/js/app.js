@@ -1,5 +1,5 @@
 // ── Bootstrap instances ────────────────────────────────────────────────────────
-let bsModalProduct, bsModalClient, bsModalOrder, bsModalOrderDetail, bsModalUser, bsModalDept;
+let bsModalProduct, bsModalClient, bsModalOrder, bsModalOrderDetail, bsModalUser, bsModalDept, bsModalProfile;
 let bsToast;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
   bsModalUser        = new bootstrap.Modal(document.getElementById('modalUser'));
   if (document.getElementById('modalDept'))
     bsModalDept = new bootstrap.Modal(document.getElementById('modalDept'));
+  if (document.getElementById('modalProfile'))
+    bsModalProfile = new bootstrap.Modal(document.getElementById('modalProfile'));
   bsToast = new bootstrap.Toast(document.getElementById('app-toast'), { delay: 3000 });
 
   // Enter key on login
@@ -148,3 +150,73 @@ function statusBadge(status) {
 }
 
 function el(id) { return document.getElementById(id); }
+
+
+// ── Profile ────────────────────────────────────────────────────────────────────
+const ROLE_LABELS = {
+  admin: '<span class="badge bg-warning text-dark">Администратор</span>',
+  director: '<span class="badge text-white" style="background:#6f42c1">Дирекция</span>',
+  head: '<span class="badge bg-primary">Нач. отдела</span>',
+  agent: '<span class="badge bg-info text-dark">Агент</span>',
+};
+
+async function openProfile() {
+  try {
+    const data = await apiGet('/auth/me');
+    // Update Auth cache
+    Auth.user.full_name = data.full_name;
+
+    el('profile-avatar').textContent = (data.full_name || data.username || '?')[0].toUpperCase();
+    el('profile-username').textContent = data.username;
+    el('profile-role-badge').innerHTML = ROLE_LABELS[data.role] || data.role;
+    el('pf-fullname').value = data.full_name || '';
+    el('pf-email').value = data.email || '';
+    el('pf-phone').value = data.phone || '';
+    el('pf-cur-pass').value = '';
+    el('pf-new-pass').value = '';
+    el('pf-new-pass2').value = '';
+    el('pf-error').classList.add('d-none');
+
+    bsModalProfile.show();
+  } catch(err) {
+    toastErr('Ошибка загрузки профиля: ' + err.message);
+  }
+}
+
+async function saveProfile() {
+  const newPass = el('pf-new-pass').value;
+  const newPass2 = el('pf-new-pass2').value;
+
+  if (newPass && newPass !== newPass2) {
+    el('pf-error').textContent = 'Новые пароли не совпадают';
+    el('pf-error').classList.remove('d-none');
+    return;
+  }
+
+  const payload = {
+    full_name: el('pf-fullname').value.trim() || null,
+    email:     el('pf-email').value.trim()    || null,
+    phone:     el('pf-phone').value.trim()    || null,
+  };
+
+  if (newPass) {
+    payload.current_password = el('pf-cur-pass').value;
+    payload.new_password = newPass;
+  }
+
+  try {
+    const result = await apiPut('/auth/profile', payload);
+    // Update navbar name
+    if (result.full_name) {
+      Auth.user.full_name = result.full_name;
+      el('nav-username').textContent = result.full_name;
+      // Update session storage
+      sessionStorage.setItem('grd_user', JSON.stringify(Auth.user));
+    }
+    bsModalProfile.hide();
+    toastOk('Профиль обновлён');
+  } catch(err) {
+    el('pf-error').textContent = err.message;
+    el('pf-error').classList.remove('d-none');
+  }
+}
