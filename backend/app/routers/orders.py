@@ -77,8 +77,8 @@ async def list_orders(
     # Status filter
     if status:
         q = q.where(Order.status == status)
-    elif me.role in ("agent", "head"):
-        # Hide processing orders from default view
+    else:
+        # Hide processing orders from default view for everyone
         q = q.where(Order.status != "processing")
 
     rows = (await db.execute(q)).scalars().all()
