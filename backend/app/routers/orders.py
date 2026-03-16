@@ -209,6 +209,17 @@ async def _send_order_notification(order: Order, db):
     # Load client info
     client = (await db.execute(select(Client).where(Client.id == order.client_id))).scalar_one_or_none()
 
+    # Build .grd file path
+    import os
+    orders_dir = os.getenv("ORDERS_DIR", "/app/orders")
+    grd_path = os.path.join(orders_dir, f"order_{order.id}.grd")
+    # Generate .grd if not exists
+    if not os.path.exists(grd_path):
+        lines = [f"{item.grd_code}@{item.qty}@{int(round(item.price))}" for item in order.items]
+        os.makedirs(orders_dir, exist_ok=True)
+        with open(grd_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+
     ok, msg = await send_order_email(
         smtp_host=cfg["smtp_host"],
         smtp_port=int(cfg["smtp_port"]),
@@ -219,6 +230,9 @@ async def _send_order_notification(order: Order, db):
         client_name=client.name if client else "—",
         client_inn=client.inn if client else None,
         client_address=client.address if client else None,
+        client_phone=client.phone if client else None,
+        client_contact=client.contact_person if client else None,
+        client_status=client.status if client else None,
         order_comment=order.comment,
         discount=order.discount,
         items=[
@@ -232,6 +246,7 @@ async def _send_order_notification(order: Order, db):
             for i in order.items
         ],
         order_id=order.id,
+        grd_filepath=grd_path if os.path.exists(grd_path) else None,
     )
 
     if ok:
