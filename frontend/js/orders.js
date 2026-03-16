@@ -55,6 +55,7 @@ async function openOrderModal(orderId = null, preselectedClientId = null) {
       orderState.clientName = order.client_name;
       el('mo-title').textContent = `Заказ #${orderId}`;
       el('mo-discount').value = order.discount;
+      if (el('mo-comment')) el('mo-comment').value = order.comment || '';
 
       // Rebuild items from order
       orderState.items = order.items.map(i => ({
@@ -99,6 +100,7 @@ function resetOrderModal() {
   el('mo-quick-code').value = '';
   el('mo-discount').value = '0';
   el('mo-id').value = '';
+  if (el('mo-comment')) el('mo-comment').value = '';
 }
 
 // ── Step navigation ────────────────────────────────────────────────────────────
@@ -355,6 +357,7 @@ async function saveOrder() {
   const payload = {
     client_id: orderState.clientId,
     discount: getDiscountValue(),
+    comment: el('mo-comment') ? el('mo-comment').value.trim() || null : null,
     items: orderState.items.map(i => ({ product_code: i.code, qty: i.qty })),
   };
 
@@ -545,6 +548,7 @@ function showOrderDetail(id) {
       ${(Auth.isAdmin() || Auth.isDirector() || Auth.isHead()) ? `<div class="col-12"><span class="text-muted">Агент:</span> <strong>${esc(o.agent_name || '—')}</strong></div>` : ''}
       <div class="col-6"><span class="text-muted">Скидка/наценка:</span> <strong>${discountStr}</strong></div>
       <div class="col-6"><span class="text-muted">Итого:</span> <strong class="text-primary">${fmtPrice(o.total)}</strong></div>
+      ${o.comment ? `<div class="col-12"><span class="text-muted">Комментарий:</span> <span class="fst-italic">${esc(o.comment)}</span></div>` : ''}
     </div>
     <hr class="my-2" />
     <p class="small text-muted mb-2">Позиции (${o.items.length}):</p>

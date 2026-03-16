@@ -5,7 +5,7 @@ function initAdminTab() {
 
 function adminSubTab(name, linkEl) {
   // Hide all sub-panels
-  ['stats', 'users', 'departments', 'import', 'photos'].forEach(t => {
+  ['stats', 'users', 'departments', 'import', 'photos', 'smtp'].forEach(t => {
     const panel = el(`admin-sub-${t}`);
     if (panel) panel.classList.add('d-none');
   });
@@ -19,6 +19,7 @@ function adminSubTab(name, linkEl) {
   if (name === 'stats') loadStats();
   if (name === 'users') loadUsers();
   if (name === 'departments') loadDepartments();
+  if (name === 'smtp') loadSmtpSettings();
 }
 
 // ── Statistics ─────────────────────────────────────────────────────────────────
@@ -420,4 +421,48 @@ async function deleteDept(id, name) {
 function esc(str) {
   if (str == null) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+
+// ── SMTP Settings ─────────────────────────────────────────────────────────────
+async function loadSmtpSettings() {
+  try {
+    const data = await apiGet('/admin/settings');
+    if (data.smtp_host) el('smtp-host').value = data.smtp_host;
+    if (data.smtp_port) el('smtp-port').value = data.smtp_port;
+    if (data.smtp_user) el('smtp-user').value = data.smtp_user;
+    // password not returned from server
+  } catch(_) {}
+}
+
+async function saveSmtpSettings() {
+  const host = el('smtp-host').value.trim();
+  const port = parseInt(el('smtp-port').value);
+  const user = el('smtp-user').value.trim();
+  const password = el('smtp-password').value;
+
+  if (!host || !user || !password) {
+    el('smtp-result').innerHTML = '<div class="alert alert-danger py-2 small">Заполните все поля</div>';
+    return;
+  }
+
+  try {
+    await apiPost('/admin/settings/smtp', { smtp_host: host, smtp_port: port, smtp_user: user, smtp_password: password });
+    el('smtp-result').innerHTML = '<div class="alert alert-success py-2 small"><i class="bi bi-check-circle me-1"></i>Настройки сохранены</div>';
+    el('smtp-password').value = '';
+    toastOk('SMTP настройки сохранены');
+  } catch(err) {
+    el('smtp-result').innerHTML = `<div class="alert alert-danger py-2 small">${esc(err.message)}</div>`;
+  }
+}
+
+async function testSmtp() {
+  const resultEl = el('smtp-result');
+  resultEl.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Отправка тестового письма...';
+  try {
+    const res = await apiPost('/admin/settings/smtp/test', {});
+    resultEl.innerHTML = `<div class="alert alert-success py-2 small"><i class="bi bi-check-circle me-1"></i>${esc(res.message)}</div>`;
+  } catch(err) {
+    resultEl.innerHTML = `<div class="alert alert-danger py-2 small"><i class="bi bi-exclamation-circle me-1"></i>${esc(err.message)}</div>`;
+  }
 }
