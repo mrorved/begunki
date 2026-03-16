@@ -82,6 +82,7 @@ class Order(Base):
     discount = Column(Float, default=0)
     total = Column(Float, default=0)
     status = Column(String(20), default="draft")  # draft | submitted | processing | exported
+    comment = Column(Text)
 
     agent = relationship("User", back_populates="orders")
     client = relationship("Client", back_populates="orders")
