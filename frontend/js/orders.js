@@ -512,8 +512,6 @@ function renderOrders(orders) {
             ${o.status !== 'exported' && o.status !== 'processing' ? `
             <li><a class="dropdown-item" href="#" onclick="openOrderModal(${o.id})">
               <i class="bi bi-pencil me-2"></i>Редактировать</a></li>
-            <li><a class="dropdown-item" href="#" onclick="submitOrder(${o.id})">
-              <i class="bi bi-send me-2"></i>Отправить</a></li>
             <li><a class="dropdown-item text-primary fw-semibold" href="#" onclick="processOrder(${o.id})">
               <i class="bi bi-arrow-right-circle me-2"></i>Отправить в обработку</a></li>` : ''}
             <li><a class="dropdown-item text-success" href="#" onclick="doExportOrder(${o.id})">
@@ -589,10 +587,14 @@ function showOrderDetail(id) {
   const editBtn = canEdit
     ? `<button class="btn btn-outline-primary btn-sm" onclick="bsModalOrderDetail.hide();openOrderModal(${o.id})"><i class="bi bi-pencil me-1"></i>Редактировать</button>`
     : '';
+  const processBtn = canEdit
+    ? `<button class="btn btn-primary btn-sm" onclick="bsModalOrderDetail.hide();processOrder(${o.id})"><i class="bi bi-arrow-right-circle me-1"></i>В обработку</button>`
+    : '';
 
   el('mod-footer').innerHTML = `
     <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
     ${editBtn}
+    ${processBtn}
     ${exportBtn}`;
 
   bsModalOrderDetail.show();
