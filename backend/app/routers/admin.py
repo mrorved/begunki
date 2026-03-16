@@ -195,14 +195,21 @@ async def test_smtp(db: AsyncSession = Depends(get_db), me=Depends(require_admin
         smtp_user=cfg["smtp_user"],
         smtp_password=cfg["smtp_password"],
         recipients=[me.email],
-        agent_name="Тест",
-        client_name="Тестовый клиент",
+        agent_name="Тест Тестович",
+        client_name="Тестовый клиент ООО",
         client_inn="1234567890",
         client_address="г. Москва, ул. Тестовая, 1",
-        order_comment="Это тестовое письмо",
-        discount=0,
-        items=[{"product_code": "TEST", "product_name": "Тестовый товар", "qty": 2, "price": 1000.0, "total": 2000.0}],
+        client_phone="+7 (999) 123-45-67",
+        client_contact="Иванов Иван",
+        client_status="active",
+        order_comment="Это тестовое письмо из системы Гардарика",
+        discount=-5,
+        items=[
+            {"product_code": "TEST001", "product_name": "Замок врезной Mottura", "qty": 2, "price": 950.0, "total": 1900.0},
+            {"product_code": "TEST002", "product_name": "Ручка дверная Abloy", "qty": 4, "price": 475.0, "total": 1900.0},
+        ],
         order_id=0,
+        grd_filepath=None,
     )
     if ok:
         return {"ok": True, "message": f"Письмо отправлено на {me.email}"}
