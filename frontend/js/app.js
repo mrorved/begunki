@@ -141,8 +141,7 @@ function fmtDate(iso) {
 function statusBadge(status) {
   const map = {
     draft:      ['secondary', 'Черновик'],
-    submitted:  ['primary',   'Отправлен'],
-    processing: ['warning',   'В обработке'],
+    processing: ['primary',   'В обработке'],
     exported:   ['success',   'Экспортирован'],
   };
   const [cls, label] = map[status] || ['secondary', status];
