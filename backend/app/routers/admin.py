@@ -4,7 +4,8 @@ from sqlalchemy import select, func
 from pydantic import BaseModel
 from typing import Optional
 from app.database import get_db
-from app.models import User, Order, Client, Product
+from app.models import User, Order, Client, Product, OrderItem
+from sqlalchemy import update as sql_update, delete as sql_delete
 from app.auth import require_admin, get_password_hash
 
 router = APIRouter()
@@ -87,6 +88,22 @@ async def delete_user(uid: int, db: AsyncSession = Depends(get_db), me=Depends(r
     user = (await db.execute(select(User).where(User.id == uid))).scalar_one_or_none()
     if not user:
         raise HTTPException(404, "Пользователь не найден")
+
+    # Check if user has clients or orders
+    client_count = (await db.execute(
+        select(func.count()).select_from(Client).where(Client.agent_id == uid)
+    )).scalar()
+    order_count = (await db.execute(
+        select(func.count()).select_from(Order).where(Order.agent_id == uid)
+    )).scalar()
+
+    if client_count > 0 or order_count > 0:
+        raise HTTPException(
+            400,
+            f"Нельзя удалить пользователя — у него {client_count} клиентов и {order_count} заказов. "
+            f"Сначала переназначьте или удалите их."
+        )
+
     await db.delete(user)
     await db.commit()
     return {"ok": True}
