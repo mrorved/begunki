@@ -45,7 +45,7 @@ async def list_orders(
 ):
     q = (
         select(Order)
-        .options(selectinload(Order.client), selectinload(Order.agent), selectinload(Order.items))
+        .options(selectinload(Order.client), selectinload(Order.agent).selectinload(User.department), selectinload(Order.items))
         .order_by(Order.created_at.desc())
     )
 
@@ -192,7 +192,8 @@ async def _check_client(client_id: int, db: AsyncSession, me: User) -> Client:
 
 async def _get_own(oid: int, db: AsyncSession, me: User, load_items: bool = False) -> Order:
     q = select(Order).options(
-        selectinload(Order.client), selectinload(Order.agent),
+        selectinload(Order.client),
+        selectinload(Order.agent).selectinload(User.department),
         *(([selectinload(Order.items)]) if load_items else [])
     ).where(Order.id == oid)
     order = (await db.execute(q)).scalar_one_or_none()
@@ -227,7 +228,7 @@ async def _fill_items(order_id: int, items: List[ItemIn], discount: float, db: A
 
 async def _reload(oid: int, db: AsyncSession) -> dict:
     q = select(Order).options(
-        selectinload(Order.client), selectinload(Order.agent), selectinload(Order.items)
+        selectinload(Order.client), selectinload(Order.agent).selectinload(User.department), selectinload(Order.items)
     ).where(Order.id == oid)
     order = (await db.execute(q)).scalar_one()
     return _to_dict(order)
