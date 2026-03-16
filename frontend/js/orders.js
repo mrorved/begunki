@@ -497,7 +497,7 @@ function renderOrders(orders) {
             <span class="text-muted">Скидка: ${discountStr}</span>
             <span class="fw-semibold text-primary">${fmtPrice(o.total)}</span>
           </div>
-          ${Auth.isAdmin() ? `<small class="text-muted">Агент: ${esc(o.agent_name || '—')}</small>` : ''}
+          ${(Auth.isAdmin() || Auth.isDirector() || Auth.isHead()) ? `<small class="text-muted"><i class="bi bi-person-badge me-1"></i>Агент: ${esc(o.agent_name || '—')}</small>` : ''}
         </div>
         <div class="dropdown flex-shrink-0">
           <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
@@ -542,7 +542,7 @@ function showOrderDetail(id) {
       <div class="col-6"><span class="text-muted">Дата:</span> <strong>${fmtDate(o.created_at)}</strong></div>
       <div class="col-12"><span class="text-muted">Клиент:</span> <strong>${esc(o.client_name || '—')}</strong>
         ${o.client_city ? `<span class="text-muted ms-1">(${esc(o.client_city)})</span>` : ''}</div>
-      ${Auth.isAdmin() ? `<div class="col-12"><span class="text-muted">Агент:</span> <strong>${esc(o.agent_name || '—')}</strong></div>` : ''}
+      ${(Auth.isAdmin() || Auth.isDirector() || Auth.isHead()) ? `<div class="col-12"><span class="text-muted">Агент:</span> <strong>${esc(o.agent_name || '—')}</strong></div>` : ''}
       <div class="col-6"><span class="text-muted">Скидка/наценка:</span> <strong>${discountStr}</strong></div>
       <div class="col-6"><span class="text-muted">Итого:</span> <strong class="text-primary">${fmtPrice(o.total)}</strong></div>
     </div>
@@ -580,7 +580,9 @@ function showOrderDetail(id) {
     </div>`;
 
   const exportBtn = `<button class="btn btn-success btn-sm" onclick="doExportOrder(${o.id})"><i class="bi bi-download me-1"></i>Экспорт .grd</button>`;
-  const editBtn   = o.status !== 'exported'
+  const canEdit = o.status !== 'exported' && o.status !== 'processing' &&
+    (Auth.isAdmin() || Auth.isHead() || o.agent_id === Auth.user.id);
+  const editBtn = canEdit
     ? `<button class="btn btn-outline-primary btn-sm" onclick="bsModalOrderDetail.hide();openOrderModal(${o.id})"><i class="bi bi-pencil me-1"></i>Редактировать</button>`
     : '';
 
