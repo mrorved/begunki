@@ -1,3 +1,83 @@
+// ── Inline client form inside order modal ────────────────────────────────────
+function toggleInlineClientForm(e) {
+  e.preventDefault();
+  const form = el('mo-inline-client-form');
+  const icon = el('mo-new-client-icon');
+  const label = el('mo-new-client-label');
+  const isOpen = !form.classList.contains('d-none');
+
+  if (isOpen) {
+    form.classList.add('d-none');
+    icon.className = 'bi bi-plus-circle';
+    label.textContent = 'Создать нового клиента';
+  } else {
+    form.classList.remove('d-none');
+    icon.className = 'bi bi-dash-circle';
+    label.textContent = 'Скрыть форму';
+    // Clear fields
+    ['moc-inn','moc-name','moc-phone','moc-city','moc-contact'].forEach(id => {
+      const f = el(id); if (f) f.value = '';
+    });
+    el('moc-inn-status').textContent = '';
+  }
+}
+
+async function lookupInnInline() {
+  const inn = el('moc-inn').value.trim();
+  if (!inn || (inn.length !== 10 && inn.length !== 12)) {
+    el('moc-inn-status').innerHTML = '<span class="text-danger">ИНН: 10 или 12 цифр</span>';
+    return;
+  }
+  const btn = el('moc-inn-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  el('moc-inn-status').innerHTML = '<span class="text-muted">Поиск...</span>';
+  try {
+    const data = await apiGet('/clients/inn/' + inn);
+    el('moc-name').value = data.name || '';
+    el('moc-city').value = data.city || '';
+    el('moc-inn-status').innerHTML =
+      '<span class="text-success"><i class="bi bi-check-circle me-1"></i>' + esc(data.name) + '</span>';
+  } catch(err) {
+    el('moc-inn-status').innerHTML =
+      '<span class="text-danger">' + err.message + '</span>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search"></i>';
+  }
+}
+
+async function saveInlineClient() {
+  const name = el('moc-name').value.trim();
+  if (!name) { toastErr('Введите название клиента'); return; }
+
+  const data = {
+    name,
+    inn:    el('moc-inn').value.trim()     || null,
+    phone:  el('moc-phone').value.trim()   || null,
+    city:   el('moc-city').value.trim()    || null,
+    contact_person: el('moc-contact').value.trim() || null,
+  };
+
+  try {
+    const saved = await API.createClient(data);
+    toastOk('Клиент создан: ' + saved.name);
+
+    // Refresh clients list
+    allClients = await API.getClients();
+
+    // Auto-select the new client and go to step 2
+    selectOrderClient(saved.id, saved.name);
+
+    // Hide form
+    el('mo-inline-client-form').classList.add('d-none');
+    el('mo-new-client-icon').className = 'bi bi-plus-circle';
+    el('mo-new-client-label').textContent = 'Создать нового клиента';
+  } catch(err) {
+    toastErr('Ошибка: ' + err.message);
+  }
+}
+
 
 // ── INN Lookup ────────────────────────────────────────────────────────────────
 async function lookupInn() {
