@@ -62,6 +62,7 @@ class Client(Base):
     city = Column(String(100))
     address = Column(Text)
     comment = Column(Text)
+    status = Column(String(50), default="new")  # new | potential | revived | active
     agent_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
