@@ -1,3 +1,15 @@
+function statusClientBadge(status) {
+  const map = {
+    new:       ['secondary', '🆕 Новый'],
+    potential: ['info',      '💡 Потенциальный'],
+    revived:   ['warning',   '🔄 Оживший'],
+    active:    ['success',   '✅ Действующий'],
+  };
+  const [cls, label] = map[status] || ['secondary', status || 'Новый'];
+  return `<span class="badge bg-${cls} bg-opacity-75">${label}</span>`;
+}
+
+
 // ── Inline client form inside order modal ────────────────────────────────────
 function toggleInlineClientForm(e) {
   e.preventDefault();
@@ -145,7 +157,10 @@ function renderClients(clients) {
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-start">
             <div class="flex-grow-1 me-2">
-              <h6 class="mb-1 fw-semibold">${esc(c.name)}</h6>
+              <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                <h6 class="mb-0 fw-semibold">${esc(c.name)}</h6>
+                ${statusClientBadge(c.status)}
+              </div>
               ${c.city ? `<small class="text-muted"><i class="bi bi-geo-alt me-1"></i>${esc(c.city)}</small>` : ''}
             </div>
             <div class="dropdown">
@@ -207,6 +222,7 @@ function openClientModal(fromOrder = false, clientId = null) {
   el('mc-city').value = '';
   el('mc-address').value = '';
   el('mc-comment').value = '';
+  el('mc-status').value = 'new';
   el('mc-inn-status').textContent = '';
 
   if (clientId) {
@@ -221,6 +237,7 @@ function openClientModal(fromOrder = false, clientId = null) {
       el('mc-city').value    = c.city    || '';
       el('mc-address').value = c.address || '';
       el('mc-comment').value = c.comment || '';
+      el('mc-status').value  = c.status  || 'new';
     }
   } else {
     el('mc-title').textContent = 'Новый клиент';
@@ -242,6 +259,7 @@ async function saveClient() {
     city:           el('mc-city').value.trim()    || null,
     address:        el('mc-address').value.trim() || null,
     comment:        el('mc-comment').value.trim() || null,
+    status:         el('mc-status').value || 'new',
   };
 
   const id = parseInt(el('mc-id').value);
