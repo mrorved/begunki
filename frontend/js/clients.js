@@ -47,7 +47,8 @@ async function lookupInnInline() {
   try {
     const data = await apiGet('/clients/inn/' + inn);
     el('moc-name').value = data.name || '';
-    el('moc-city').value = data.city || '';
+    el('moc-city').value    = data.city    || '';
+    el('moc-address').value = data.address || '';
     el('moc-inn-status').innerHTML =
       '<span class="text-success"><i class="bi bi-check-circle me-1"></i>' + esc(data.name) + '</span>';
   } catch(err) {
