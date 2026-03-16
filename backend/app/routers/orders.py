@@ -12,7 +12,6 @@ from app.auth import get_current_user, can_view_all, can_manage_orders
 
 router = APIRouter()
 
-VALID_DISCOUNTS = {-10, -5, 0, 10, 20}
 PROCESSING_STATUS = 'processing'
 
 
@@ -87,8 +86,8 @@ async def list_orders(
 
 @router.post("")
 async def create_order(data: OrderIn, db: AsyncSession = Depends(get_db), me: User = Depends(get_current_user)):
-    if data.discount not in VALID_DISCOUNTS:
-        raise HTTPException(400, f"Допустимые значения скидки: {sorted(VALID_DISCOUNTS)}")
+    if not (-99 <= data.discount <= 99):
+        raise HTTPException(400, "Скидка должна быть от -99% до +99%")
 
     client = await _check_client(data.client_id, db, me)
 
@@ -118,8 +117,8 @@ async def update_order(
     if order.status == "exported":
         raise HTTPException(400, "Экспортированный заказ нельзя редактировать")
 
-    if data.discount not in VALID_DISCOUNTS:
-        raise HTTPException(400, f"Допустимые значения скидки: {sorted(VALID_DISCOUNTS)}")
+    if not (-99 <= data.discount <= 99):
+        raise HTTPException(400, "Скидка должна быть от -99% до +99%")
 
     await _check_client(data.client_id, db, me)
 
