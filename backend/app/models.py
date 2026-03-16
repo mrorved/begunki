@@ -27,6 +27,8 @@ class User(Base):
     role = Column(String(20), nullable=False, default="agent")  # admin | director | head | agent
     is_active = Column(Boolean, default=True)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    email = Column(String(200))
+    phone = Column(String(50))
     created_at = Column(DateTime, default=datetime.utcnow)
 
     department = relationship("Department", back_populates="users")
