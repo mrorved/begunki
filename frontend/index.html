@@ -85,6 +85,11 @@
             </a>
           </li>
           <li class="nav-item ms-lg-2">
+            <a class="nav-link rounded" href="#" onclick="openProfile()">
+              <i class="bi bi-person-circle"></i>
+            </a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link text-white-50 rounded" href="#" onclick="doLogout()">
               <i class="bi bi-box-arrow-right"></i>
             </a>
@@ -614,6 +619,64 @@
         <button class="btn btn-primary" onclick="saveUser()">Сохранить</button>
       </div>
       <input type="hidden" id="mu-id" />
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal fade" id="modalProfile" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>Мой профиль</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3 text-center">
+          <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2"
+            style="width:64px;height:64px;font-size:1.8rem" id="profile-avatar">А</div>
+          <div class="fw-semibold" id="profile-username"></div>
+          <div id="profile-role-badge" class="mt-1"></div>
+        </div>
+        <hr />
+        <div class="mb-3">
+          <label class="form-label">Полное имя</label>
+          <input id="pf-fullname" type="text" class="form-control" />
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">Email</label>
+            <input id="pf-email" type="email" class="form-control" />
+          </div>
+          <div class="col-6">
+            <label class="form-label">Телефон</label>
+            <input id="pf-phone" type="tel" class="form-control" />
+          </div>
+        </div>
+        <hr />
+        <p class="text-muted small mb-2">Смена пароля (оставьте пустым если не меняете)</p>
+        <div class="mb-2">
+          <label class="form-label">Текущий пароль</label>
+          <input id="pf-cur-pass" type="password" class="form-control" />
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">Новый пароль</label>
+            <input id="pf-new-pass" type="password" class="form-control" />
+          </div>
+          <div class="col-6">
+            <label class="form-label">Повтор</label>
+            <input id="pf-new-pass2" type="password" class="form-control" />
+          </div>
+        </div>
+        <div id="pf-error" class="alert alert-danger mt-2 d-none py-2 small"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn btn-primary" onclick="saveProfile()">
+          <i class="bi bi-check-lg me-1"></i>Сохранить
+        </button>
+      </div>
     </div>
   </div>
 </div>
