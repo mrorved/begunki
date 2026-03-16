@@ -158,11 +158,20 @@ async def import_price(
                 skipped += 1
                 continue
 
-            # Detect photo
+            # Detect photo — try exact code, then stripped zeros (e.g. 00000064 -> 64)
             photo = None
-            for ext in (".jpg", ".jpeg", ".png", ".webp", ".JPG", ".JPEG", ".PNG"):
-                if os.path.exists(os.path.join(photos_dir, f"{code}{ext}")):
-                    photo = f"{code}{ext}"
+            exts = (".jpg", ".jpeg", ".png", ".webp", ".JPG", ".JPEG", ".PNG")
+            # Build list of candidate filenames to check
+            candidates = [code]
+            stripped = code.lstrip("0") or "0"
+            if stripped != code:
+                candidates.append(stripped)
+            for candidate in candidates:
+                for ext in exts:
+                    if os.path.exists(os.path.join(photos_dir, f"{candidate}{ext}")):
+                        photo = f"{candidate}{ext}"
+                        break
+                if photo:
                     break
 
             db.add(Product(
