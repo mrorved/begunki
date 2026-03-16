@@ -215,7 +215,7 @@ async def _send_order_notification(order: Order, db):
     grd_path = os.path.join(orders_dir, f"order_{order.id}.grd")
     # Generate .grd if not exists
     if not os.path.exists(grd_path):
-        lines = [f"{item.grd_code}@{item.qty}@{int(round(item.price))}" for item in order.items]
+        lines = [f"{item.product_code}@{item.qty}" for item in order.items]
         os.makedirs(orders_dir, exist_ok=True)
         with open(grd_path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
@@ -259,7 +259,7 @@ async def _send_order_notification(order: Order, db):
 async def export_order(oid: int, db: AsyncSession = Depends(get_db), me: User = Depends(get_current_user)):
     order = await _get_own(oid, db, me, load_items=True)
 
-    lines = [f"{item.grd_code}@{item.qty}@{int(round(item.price))}" for item in order.items]
+    lines = [f"{item.product_code}@{item.qty}" for item in order.items]
     filename = f"order_{order.id}.grd"
     filepath = os.path.join(get_orders_dir(), filename)
 
