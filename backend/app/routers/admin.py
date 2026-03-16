@@ -4,7 +4,7 @@ from sqlalchemy import select, func
 from pydantic import BaseModel
 from typing import Optional
 from app.database import get_db
-from app.models import User, Order, Client, Product, OrderItem
+from app.models import User, Order, Client, Product, OrderItem, Settings
 from sqlalchemy import update as sql_update, delete as sql_delete
 from app.auth import require_admin, get_password_hash
 
@@ -135,3 +135,75 @@ async def stats(db: AsyncSession = Depends(get_db), _=Depends(require_admin)):
         "total_products": total_products,
         "by_agent": by_agent,
     }
+
+
+# ── SMTP Settings ─────────────────────────────────────────────────────────────
+from pydantic import BaseModel as PydanticBase
+
+class SmtpSettings(PydanticBase):
+    smtp_host: str = "smtp.yandex.ru"
+    smtp_port: int = 465
+    smtp_user: str
+    smtp_password: str
+
+
+@router.get("/settings")
+async def get_settings(db: AsyncSession = Depends(get_db), _=Depends(require_admin)):
+    rows = (await db.execute(select(Settings))).scalars().all()
+    result = {r.key: r.value for r in rows}
+    # Never return password
+    result.pop("smtp_password", None)
+    return result
+
+
+@router.post("/settings/smtp")
+async def save_smtp_settings(
+    data: SmtpSettings,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_admin),
+):
+    settings_map = {
+        "smtp_host": data.smtp_host,
+        "smtp_port": str(data.smtp_port),
+        "smtp_user": data.smtp_user,
+        "smtp_password": data.smtp_password,
+    }
+    for key, value in settings_map.items():
+        existing = (await db.execute(select(Settings).where(Settings.key == key))).scalar_one_or_none()
+        if existing:
+            existing.value = value
+        else:
+            db.add(Settings(key=key, value=value))
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/settings/smtp/test")
+async def test_smtp(db: AsyncSession = Depends(get_db), me=Depends(require_admin)):
+    from app.email_service import send_order_email
+    rows = (await db.execute(select(Settings))).scalars().all()
+    cfg = {r.key: r.value for r in rows}
+
+    if not all(k in cfg for k in ("smtp_host", "smtp_port", "smtp_user", "smtp_password")):
+        raise HTTPException(400, "SMTP не настроен")
+    if not me.email:
+        raise HTTPException(400, "У вашего профиля не указана почта для тестирования")
+
+    ok, msg = await send_order_email(
+        smtp_host=cfg["smtp_host"],
+        smtp_port=int(cfg["smtp_port"]),
+        smtp_user=cfg["smtp_user"],
+        smtp_password=cfg["smtp_password"],
+        recipients=[me.email],
+        agent_name="Тест",
+        client_name="Тестовый клиент",
+        client_inn="1234567890",
+        client_address="г. Москва, ул. Тестовая, 1",
+        order_comment="Это тестовое письмо",
+        discount=0,
+        items=[{"product_code": "TEST", "product_name": "Тестовый товар", "qty": 2, "price": 1000.0, "total": 2000.0}],
+        order_id=0,
+    )
+    if ok:
+        return {"ok": True, "message": f"Письмо отправлено на {me.email}"}
+    raise HTTPException(500, f"Ошибка отправки: {msg}")

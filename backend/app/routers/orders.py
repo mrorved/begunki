@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from app.database import get_db
 from sqlalchemy.orm import selectinload
-from app.models import Order, OrderItem, Client, Product, User
+from app.models import Order, OrderItem, Client, Product, User, Settings
 from app.auth import get_current_user, can_view_all, can_manage_orders
 
 router = APIRouter()
@@ -31,6 +31,7 @@ class ItemIn(BaseModel):
 class OrderIn(BaseModel):
     client_id: int
     discount: float = 0
+    comment: Optional[str] = None
     items: List[ItemIn]
 
 
@@ -91,7 +92,7 @@ async def create_order(data: OrderIn, db: AsyncSession = Depends(get_db), me: Us
 
     client = await _check_client(data.client_id, db, me)
 
-    order = Order(agent_id=me.id, client_id=client.id, discount=data.discount, status="draft")
+    order = Order(agent_id=me.id, client_id=client.id, discount=data.discount, status="draft", comment=data.comment)
     db.add(order)
     await db.flush()
 
@@ -129,6 +130,7 @@ async def update_order(
 
     order.client_id = data.client_id
     order.discount = data.discount
+    order.comment = data.comment
     order.total = await _fill_items(order.id, data.items, data.discount, db)
     await db.commit()
 
@@ -155,10 +157,87 @@ async def submit_order(oid: int, db: AsyncSession = Depends(get_db), me: User = 
 async def process_order(oid: int, db: AsyncSession = Depends(get_db), me: User = Depends(get_current_user)):
     if not can_manage_orders(me):
         raise HTTPException(403, "Доступ запрещён")
-    order = await _get_own(oid, db, me)
+
+    order = await _get_own(oid, db, me, load_items=True)
     order.status = "processing"
     await db.commit()
+
+    # Send email notification
+    try:
+        await _send_order_notification(order, db)
+    except Exception as e:
+        print(f"[EMAIL] Failed to send notification: {e}")
+
     return {"ok": True, "status": "processing"}
+
+
+async def _send_order_notification(order: Order, db):
+    from app.email_service import send_order_email
+
+    # Load SMTP settings
+    rows = (await db.execute(select(Settings))).scalars().all()
+    cfg = {r.key: r.value for r in rows}
+
+    if not all(k in cfg for k in ("smtp_host", "smtp_port", "smtp_user", "smtp_password")):
+        print("[EMAIL] SMTP not configured, skipping")
+        return
+
+    # Collect recipients
+    recipients = []
+
+    # Agent email
+    agent = (await db.execute(select(User).where(User.id == order.agent_id))).scalar_one_or_none()
+    if agent and agent.email:
+        recipients.append(agent.email)
+
+    # Head of department email
+    if agent and agent.department_id:
+        head = (await db.execute(
+            select(User).where(
+                User.department_id == agent.department_id,
+                User.role == "head",
+                User.is_active == True,
+            )
+        )).scalar_one_or_none()
+        if head and head.email and head.email not in recipients:
+            recipients.append(head.email)
+
+    if not recipients:
+        print("[EMAIL] No recipients with email, skipping")
+        return
+
+    # Load client info
+    client = (await db.execute(select(Client).where(Client.id == order.client_id))).scalar_one_or_none()
+
+    ok, msg = await send_order_email(
+        smtp_host=cfg["smtp_host"],
+        smtp_port=int(cfg["smtp_port"]),
+        smtp_user=cfg["smtp_user"],
+        smtp_password=cfg["smtp_password"],
+        recipients=recipients,
+        agent_name=agent.full_name or agent.username if agent else "—",
+        client_name=client.name if client else "—",
+        client_inn=client.inn if client else None,
+        client_address=client.address if client else None,
+        order_comment=order.comment,
+        discount=order.discount,
+        items=[
+            {
+                "product_code": i.product_code,
+                "product_name": i.product_name,
+                "qty": i.qty,
+                "price": i.price,
+                "total": i.total,
+            }
+            for i in order.items
+        ],
+        order_id=order.id,
+    )
+
+    if ok:
+        print(f"[EMAIL] Order #{order.id} notification sent to: {recipients}")
+    else:
+        print(f"[EMAIL] Failed: {msg}")
 
 
 @router.get("/{oid}/export")
@@ -259,6 +338,7 @@ def _to_dict(o: Order) -> dict:
         "created_at": o.created_at.isoformat() if o.created_at else None,
         "discount": o.discount,
         "total": o.total,
+        "comment": o.comment,
         "status": o.status,
         "items": [
             {
