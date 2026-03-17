@@ -382,21 +382,28 @@ async function saveOrder() {
 // ── Orders List ────────────────────────────────────────────────────────────────
 let allOrders = [];
 
+let _ordersFiltersLoaded = false;
+let _initOrdersRunning = false;
+
 async function initOrdersTab() {
+  if (_initOrdersRunning) return;
+  _initOrdersRunning = true;
+  try {
   // Show advanced filters for admin/director
   if (Auth.canViewAll()) {
     const adv = el('orders-advanced-filters');
     if (adv) adv.classList.remove('d-none');
-    // Hide "New order" button for director
     if (Auth.isDirector()) {
       const btn = el('btn-new-order');
       if (btn) btn.classList.add('d-none');
     }
-    // Load departments for filter
+
+    // Always reset and reload filters fresh (avoid duplicates and deleted data)
     try {
       const depts = await API.getDepartments();
       const deptSel = el('orders-filter-dept');
       if (deptSel) {
+        deptSel.innerHTML = '<option value="">Все отделы</option>';
         depts.forEach(d => {
           const o = document.createElement('option');
           o.value = d.id; o.textContent = d.name;
@@ -404,11 +411,17 @@ async function initOrdersTab() {
         });
       }
     } catch(_) {}
-    // Load clients for filter
+
+    // Reset agent filter
+    const agentSel = el('orders-filter-agent');
+    if (agentSel) agentSel.innerHTML = '<option value="">Все агенты</option>';
+
+    // Always reload clients fresh (removes deleted ones)
     try {
       const clients = await API.getClients();
       const cSel = el('orders-filter-client');
       if (cSel) {
+        cSel.innerHTML = '<option value="">Все клиенты</option>';
         clients.forEach(c => {
           const o = document.createElement('option');
           o.value = c.id; o.textContent = c.name;
@@ -418,6 +431,9 @@ async function initOrdersTab() {
     } catch(_) {}
   }
   await loadOrders();
+  } finally {
+    _initOrdersRunning = false;
+  }
 }
 
 async function onDeptFilterChange() {
